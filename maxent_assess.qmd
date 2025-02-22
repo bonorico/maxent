@@ -1,0 +1,182 @@
+---
+title: "Maxent distribution"
+number-sections: true
+author: 
+  - name: Federico Bonofiglio
+
+abstract: > 
+  To assess parameter search of general maxent distribution
+
+format: 
+  html:
+    code-fold: true  
+    bibliography: references.bib
+---
+
+```{r}
+#| echo: false
+#| label: setup
+
+# repartition function
+
+Zlambda <- function(lambda, lim = c(0, Inf)){
+  
+  integrand <- function(x)
+    exp(
+      -((lambda[1]*x) + (lambda[2]*x^2) + (lambda[3]*x^3) + (lambda[4]*x^4)) 
+    )
+  
+  integrate(
+    f = integrand,
+    lower = lim[1],
+    upper = lim[2]
+  )
+  
+}
+
+moment <- function(lambda, lim = c(0, Inf)){
+  
+
+  integrand <- function(x)
+    x*    exp(
+      -((lambda[1]*x) + (lambda[2]*x^2) + (lambda[3]*x^3) + (lambda[4]*x^4)) 
+    )/Zlambda(lambda, lim)
+  
+  integrate(
+    f = integrand,
+    lower = lim[1],
+    upper = lim[2]
+  )
+    
+  
+}
+
+objective <- function(lambda, lim, a){
+
+  log(
+    Zlambda(lambda, lim)
+  ) + (lambda[1]*a[1]) + (lambda[2]*a[2]) + (lambda[3]*a[3]) + (lambda[4]*a[4])
+  
+}
+
+cstr <- function(lambda, lim, a){
+  
+  c1 <- moment(lambda, lim) - a[1]
+  c2 <- moment(lambda, lim) - a[2]
+  c3 <- moment(lambda, lim) - a[3]
+  c4 <- moment(lambda, lim) - a[4]
+
+  return(
+    c(
+      c1, c2, c3, c4
+    )
+  )
+  
+}
+
+
+
+#  example j = 2
+
+
+
+
+```
+
+```{r}
+#| label: optim
+#| echo: false
+#| eval: false
+
+set.seed(52)
+a1 <- mean(rexp(10000, 1/2))
+
+
+#the optimiser - minimises by default
+res <- Rsolnp::solnp(
+  c(1, 1), #starting values (random - obviously need to be positive and sum to 15)
+  objective, #function to optimise
+  eqfun=cstr, #equality function 
+  eqB=c(0, 0),   #the equality constraint
+  LB=c(-10, -10), #lower bound for parameters i.e. greater than zero
+  UB=c(10, 10),
+  #lim = 
+  a = c(1, a1)
+) 
+
+
+
+
+```
+
+# Maximum Entropy Distribution
+
+Assume the following data is given: moment $a_j$ of order $j = 1, 2, \ldots$. We must find the probability density $p(x)$ maximizing the entropy
+
+$$
+H_{p(x)} = \int_D p(x)\log{p(x)}dx; \quad \quad x\in D, 
+$$ {#eq-ent} subject to the moment constraint, $E X^j = a_j$[^1], by including as many Lagrange multipliers $\lambda_j$ $\forall j$ (not shown). The analytic result is
+
+[^1]: $E X^j = \int_D x^jp(x)dx$.
+
+$$
+p^*(x) = \exp\left (-\lambda_0 - \sum_{j = 1}^m \lambda_j x^j\right ), 
+$$ {#eq-maxent} which is called the maximum entropy distribution [@jaynes2003prob], shortly Maxent distribution. For convenience, we set the notation $p^*(x) = p(x)$ throughout.
+
+We have
+
+$$
+\begin{aligned}
+1 &= \exp(-\lambda_0)\int_D \underbrace{\exp\left (-\sum_{j = 1}^m \lambda_j x^j\right ) dx}_{Z(\boldsymbol{\lambda}), \quad \boldsymbol{\lambda} = \lambda_1, \lambda_2,\overset{j}{\ldots}, \lambda_m } \\ &= \exp(-\lambda_0)Z(\boldsymbol{\lambda}),
+\end{aligned}
+$$ which leads to the relation $$
+\lambda_0 = \log Z(\boldsymbol{\lambda}),
+$$ with partition function, $Z(\boldsymbol{\lambda})$, normalizing @eq-maxent such that it integrates to unity [@jaynes2003prob] . By @eq-ent the entropy of @eq-maxent is $$
+\begin{aligned}
+&-\int_D \exp\left (-\lambda_0 - \sum_{j = 1}^m \lambda_j x^j\right )\cdot \left (-\lambda_0 - \sum_{j = 1}^m \lambda_j x^j\right ) = \\ 
+&\lambda_0 \underbrace{\int_D \exp\left (-\lambda_0 - \sum_{j = 1}^m \lambda_j x^j\right ) dx}_{1} + \sum_{j=1}^m \lambda_j \underbrace{\int_D x^j \exp\left (-\lambda_0 - \sum_{j = 1}^m \lambda_j x^j\right ) dx}_{a_j \quad \text{is the moment of order j}} = \\
+&\lambda_0 + \sum_{j = 1}^m \lambda_j a_j \quad \geq \quad  H_{p(x)},
+\end{aligned}
+$$ {#eq-maxent_ent} since we have the series of inequalities [@milev2012mom] $$
+0 \geq H_{p^*(x)_1} \geq  H_{p^*(x)_2} \geq \ldots H_{p^*(x)_m} \ldots \geq H_{p^*(x)_M} \ldots \geq H_{p(x)},
+$$ {#eq-approx} which is to say, the more pieces of information $m<M$ we include, the smaller the entropy $H_{p^*(x)_m}$ becomes. That is, we can get closer and closer to $p(x)$ by many $m$-steps but the maximum is only $\epsilon$-achievable [@cover2012elements].
+
+To use @eq-maxent we must evaluate the Lagrange multipliers $\boldsymbol{\lambda}$.
+
+# Solution of Lagrange multipliers
+
+Given @eq-maxent_ent and @eq-approx, we have $$
+\boldsymbol{\lambda} : \underset{\boldsymbol{\lambda}}{\text{min}} \left [ \lambda_0 + \sum_{j = 1}^m \lambda_j a_j \right ],
+$$ subject to
+
+$$
+\begin{aligned}
+ a_j &= -\frac{\partial \log Z(\boldsymbol{\lambda})}{\partial \lambda_j}  \\ 
+&= \exp(-\lambda_0)\int_D x^j \exp\left (- \sum_{j = 1}^m \lambda_j x^j\right ) dx , \quad \forall j = 1,2,\ldots, m,
+\end{aligned}
+$$ {#eq-constr} which might be solved numerically for $m>2$ with a constrained optimizer.
+
+## Example m = 1
+
+We observe the (sample) average, $a_1 = 2$, of a positive random variable $X \in D \equiv [0, \infty]$. What is the probability law best encoding $X | a_1 = 2$ ? @eq-maxent becomes $p(x) = \exp(-\lambda_0)\cdot e^{-\lambda_1x}$ and $$
+\begin{aligned}
+Z(\lambda_1) &= \int_0^\infty e^{-\lambda_1x}dx \\
+ &= - \frac{1}{\lambda_1e^{\lambda_1x}} \Big |_0^\infty \\
+ &= -0 + \frac{1}{\lambda_1},
+\end{aligned}
+$$ thus $\lambda_0 = \log Z(\lambda_1) = -\log\lambda_1$. @eq-constr evaluates to $$
+\begin{aligned}
+a_1 &= e^{-\lambda_0}\int_0^\infty xe^{-\lambda_1x}dx \\
+ &= \frac{\lambda_1}{\lambda_1^2}\left ( -\lambda_1 x e^{-\lambda_1x}  - e^{-\lambda_1x}  \right ) \big |_0^\infty \\
+ & = 0 - (-1)\frac{1}{\lambda_1},
+\end{aligned}
+$$ hence $\lambda_1 = 1/a_1 = 1/2$ and by @eq-maxent_ent $$
+H_{p(x)_1} = \lambda_0 + \lambda_1a_1 = \underbrace{\log Z(\lambda_1)}_{-\log \lambda1} + \frac{a_1}{a_1} =  1 -\log\frac{1}{2}
+$$ which is the entropy of $p(x) = 2e^{x/2}$, thus $X\sim Exp(1/2)$. All at once, we derived the most likely probability law for $X |a_1 = 2, X \in \mathbb{R}^+$, which is Exponential with rate $\lambda_1$, and obtained the maximum likelihood estimate $\lambda_1 = 1/a_1 = 0.5$.
+
+## Other analytic results
+
+It turns out this procedure [yields](https://en.wikipedia.org/wiki/Maximum_entropy_probability_distribution#Other_examples) many well known probabilities laws [@lisman1972] for a generic constraint $f_j(x) = a_j$. For instance $X|a_1 = \mu, a_2 =\sigma^2, X \in \mathbb{R}$ returns $X\sim N(\mu, \sigma^2)$. 
+However, evaluation of @eq-maxent is typically numerical for $m>2$. 
+
+
