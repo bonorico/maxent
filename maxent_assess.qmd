@@ -176,7 +176,7 @@ $$ which is the entropy of $p(x) = 2e^{x/2}$, thus $X\sim Exp(1/2)$. All at once
 
 ## Other analytic results
 
-It turns out this procedure [yields](https://en.wikipedia.org/wiki/Maximum_entropy_probability_distribution#Other_examples) many well known probabilities laws [@lisman1972] for a generic constraint $f_j(x) = a_j$. For instance $X|a_1 = \mu, a_2 =\sigma^2, X \in \mathbb{R}$ returns $X\sim N(\mu, \sigma^2)$. 
+It turns out this procedure [yields](https://en.wikipedia.org/wiki/Maximum_entropy_probability_distribution#Other_examples) many well known probabilities laws [@lisman1972] for a generic constraint $E[f_j(x)] = a_j$. For instance $X|a_1 = \mu, a_2 =\sigma^2, X \in \mathbb{R}$ returns $X\sim N(\mu, \sigma^2)$. 
 However, evaluation of @eq-maxent is typically numerical for $m>2$. 
 
 
